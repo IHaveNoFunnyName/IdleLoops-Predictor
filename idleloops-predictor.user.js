@@ -366,34 +366,88 @@ const Koviko = {
 
       // Build the CSS
       let css = `
-      .nextActionContainer{width:auto!important;padding:0 4px}
-      #nextActionsList{height:100%!important; overflow-y:scroll;}
-      #curActionsListContainer{width:24%!important; z-index: 100;}
-      #nextActionsList:hover{margin-left:-40%;padding-left:40%}
-      #actionList>div:nth-child(2){left: 53px !important}
-      .nextActionContainer:nth-child(1n+9) .showthis {bottom: 5px; top: unset;}
-      span.koviko{font-weight:bold;color:#8293ff}
-      div.koviko{top:-5px;left:auto;right:100%}
-      ul.koviko{list-style:none;margin:0;padding:0;pointer-events:none;display:inline;}
-      ul.koviko li{display:inline-block;margin: 0 2px;font-weight:bold;font-size:90%}
-      ul.koviko.invalid li{color:#c00!important}
-      ul.koviko .mana{color:#8293ff}
-      ul.koviko .gold{color:#d09249}
-      ul.koviko .rep{color:#b06f37}
-      ul.koviko .soul{color:#9d67cd}
-      ul.koviko .herbs{color:#4caf50}
-      ul.koviko .hide{color:#663300}
-      ul.koviko .potions{color:#00b2ee}
-      ul.koviko .lpoitons{color:#436ef7}
-      ul.koviko .blood{color:#8b0000}
-      ul.koviko .crafts{color:#777777}
-      ul.koviko .adventures{color:#191919}
-      ul.koviko .ritual{color:#ff1493}
-      ul.koviko .artifacts{color:#ffd700}
-      ul.koviko .mind{color:#006400}
-      .actionOptions .showthis {width:max-content;bottom:100%;max-width:400px;margin-bottom:5px;}
-      .travelContainer, .actionContainer {position:relative;}
-      `;
+      .nextActionContainer {
+		display: grid !important;
+		grid-template: "a b . c" / auto auto 1fr auto;
+		width: auto !important;
+		padding: 0 4px
+		}
+		.nextActionContainer > div:first-child {
+			width:50px;
+		}
+		.nextActionContainer > div:nth-child(2) {
+			width: 120px;
+			text-align: right;
+			grid-area: c
+		}
+		.koviko.valid {
+			grid-area:b;
+		}
+		  #nextActionsList {
+			height: 100%!important;
+			overflow-y: scroll;
+		}
+		  #curActionsListContainer {
+			width: 24%!important;
+			z-index:  100;
+		}
+		  #nextActionsList: hover {
+			margin-left: -40%;
+			padding-left: 40%
+		}
+		  #actionList>div: nth-child(2) {
+			left:  53px !important
+		}
+		  .nextActionContainer: nth-child(1n+9) .showthis {
+			bottom:  5px;
+			top:  unset;
+		}
+        .actionOptions .showthis {
+			width: max-content;
+			bottom: 100%;
+			max-width: 400px;
+			margin-bottom: 5px;
+		}
+		.travelContainer, .actionContainer { position: relative; }
+		  span.koviko {
+			font-weight: bold;
+			color: #8293ff
+		}
+		  div.koviko {
+			top: -5px;
+			left: auto;
+			right: 100%
+		}
+		  ul.koviko {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			pointer-events: none;
+			display: inline;
+		}
+		  ul.koviko li {
+			display: inline-block;
+			margin:  0 2px;
+			font-weight: bold;
+			font-size: 90%
+		}
+
+		ul.koviko.invalid li { color: #c00!important }
+		ul.koviko .mana { color: #8293ff }
+		ul.koviko .gold { color: #d09249 }
+		ul.koviko .rep { color: #b06f37 }
+		ul.koviko .soul { color: #9d67cd }
+		ul.koviko .herbs {color: #4caf50 }
+		ul.koviko .hide { color: #663300 }
+		ul.koviko .potions { color: #00b2ee }
+		ul.koviko .lpoitons { color: #436ef7 }
+		ul.koviko .blood { color: #8b0000 }
+		ul.koviko .crafts { color: #777777 }
+		ul.koviko .adventures { color: #191919 }
+		ul.koviko .ritual { color: #ff1493 }
+		ul.koviko .artifacts { color: #ffd700 }
+		ul.koviko .mind { color: #006400 }
+		`;
       document.getElementById("actionsColumn").style.width="500px";
 
       // Create the <style> element if it doesn't already exist
