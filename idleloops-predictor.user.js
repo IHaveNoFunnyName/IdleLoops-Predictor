@@ -408,8 +408,10 @@ const Koviko = {
       .nextActionContainer > div:first-child { width: 70px; cursor:pointer;}
       .nextActionContainer > div:nth-child(2) { width: 120px; text-align: right; grid-area: c }
       .koviko.valid { grid-area: b; }
-      .nextActionContainer > div:first-child:hover img {filter: invert(.5) sepia(1) saturate(5) hue-rotate(270deg);}
-      .target > div:first-child:hover img {filter: invert(.5) sepia(1) saturate(5) hue-rotate(140deg);}
+      .t-dark .nextActionContainer > div:first-child:hover img {filter: invert(.5) sepia(1) saturate(5) hue-rotate(270deg);}
+      .t-dark .target > div:first-child:hover img {filter: invert(.5) sepia(1) saturate(5) hue-rotate(140deg);}
+      .nextActionContainer > div:first-child:hover img {filter: invert(.5) sepia(1) saturate(5) hue-rotate(90deg);}
+      .target > div:first-child:hover img {filter: invert(.5) sepia(1) saturate(5) hue-rotate(315deg);}
       #nextActionsList{height:100%!important; overflow-y:scroll;}
       #curActionsListContainer{width:120px!important; z-index: 100;}
       #nextActionsList:hover{margin-left:-40%;padding-left:40%}
