@@ -301,6 +301,38 @@ const Koviko = {
     }
   },
 
+  /** A cache so the predictor can skip expensivly calculating each action */
+
+  Cache: class{
+    constructor(){
+      this.cache = [];
+      this.index = 0;
+    }
+    next(key) {
+      if(this.cache.length > (this.index + 1) && this.equals(this.cache[this.index + 1].key, key)){
+        return structuredClone(this.cache[++this.index].state);
+      } else{
+        this.miss();
+        return false;
+      };
+    }
+    miss() {
+      this.cache = this.cache.slice(0, this.index + 1);
+    }
+    reset(state) {
+      this.index = 0;
+      if(!this.equals(state, this.cache[0]?.state)){
+        this.cache = [{key: '', state: structuredClone(state)}]
+      }
+    }
+    add(key, state) {
+      this.cache.push({'key': key, 'state':structuredClone(state)})
+    }
+    equals(key1, key2) {
+      return JSON.stringify(key1) === JSON.stringify(key2);
+    }
+  },
+
   /** A predictor which uses Predictions to calculate and estimate an entire action list. */
   Predictor: class {
     /**
@@ -579,6 +611,10 @@ const Koviko = {
 
       // Set default target
       this.target = ['SS', 'SS'];
+
+      // Initialise cache
+
+      this.cache = new Koviko.Cache();
 
       // Alias the globals to a shorter variable name
       const g = Koviko.globals;
@@ -1154,7 +1190,7 @@ const Koviko = {
        * Organize accumulated resources, accumulated stats, and accumulated progress into a single object
        * @var {Koviko.Predictor~State}
        */
-      const state = {
+      let state = {
         resources: { mana: 250, town: 0, guild: "" },
         stats: Koviko.globals.statList.reduce((stats, name) => (stats[name] = getExpOfLevel(buffs.Imbuement2.amt*(Koviko.globals.skills.Wunderkind.exp>=100?2:1)), stats), {}),
         talents:  Koviko.globals.statList.reduce((talents, name) => (talents[name] = stats[name].talent, talents), {}),
@@ -1200,6 +1236,9 @@ const Koviko = {
       
       const [targetIcon, targetName] = this.target;
 
+      // Reset the cache's index
+      this.cache.reset(state);
+      let cache = true;
       /**
        * All affected resources of the current action list
        * @var {Array.<string>}
@@ -1221,10 +1260,16 @@ const Koviko = {
 
       // Run through the action list and update the view for each action
       actions.forEach((listedAction, i) => {
+        if(cache) {
+          cache = this.cache.next({name: listedAction.name, n: listedAction.loops});
+          if(cache) state = cache
+        }
+        
         /** @var {Koviko.Prediction} */
         let prediction = this.predictions[listedAction.name];
 
         if (prediction) {
+
           /**
            * Element for the action in the list
            * @var {HTMLElement}
@@ -1246,6 +1291,7 @@ const Koviko = {
               total: Koviko.globals.towns[prediction.action.townNum]['total' + prediction.action.varName],
             };
           }
+          if(!cache) {
           // Scope the loop variable outside the for loop, so we can read how many actions actually completed
           let loop = 0;
           // Predict each loop in sequence
@@ -1296,7 +1342,7 @@ const Koviko = {
 
           if(prediction.name in state.progress)
             state.currProgress[prediction.name] = state.progress[prediction.name].completed / prediction.action.segments;
-
+        }
           // Update the snapshots
           for (let i in snapshots) {
             snapshots[i].snap(state[i]);
@@ -1314,6 +1360,9 @@ const Koviko = {
             let setTarget = this.helpers.setTargetAction;
             div.querySelector(':scope > div').onclick = function(x) {setTarget(this.querySelector('img').outerHTML, listedAction.name)};
           }
+        }
+        if(!cache) {
+          this.cache.add({name: listedAction.name, n: listedAction.loops}, state)
         }
       });
 
