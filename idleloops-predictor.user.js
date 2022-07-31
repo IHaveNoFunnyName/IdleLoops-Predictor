@@ -1259,22 +1259,27 @@ const Koviko = {
       // Initialize the display element for the total amount of mana used
       container && (this.totalDisplay.innerHTML = '');
 
-      let isValid, loop;
+      //Initialize cached variables outside of the loop so we don't have to worry about initializing them on hit/miss in two separate places
+      /** @var {boolean} */
+      let isValid;
+
+      /** @var {number} */
+      let loop;
 
       // Run through the action list and update the view for each action
       actions.forEach((listedAction, i) => {
-        
-        // If the cache was still valid last time it was used
+        // If the cache hit the last time
         if(cache) {
-          cache = this.cache.next({name: listedAction.name, n: listedAction.loops});
-          // Pull out all the variables we would expensivly calculate
-          if(cache) [state, total, isValid, loop] = cache
+          // Pull out all the variables we would usually expensivly calculate
+          cache = this.cache.next([listedAction.name, listedAction.loops, listedAction.disabled]);
+          if(cache) {
+            [state, total, isValid, loop] = cache
+            
+            // Why is totalTicks stored both inside resources and outside the loop? Who knows, but this line needs to be here to make it behave correctly 
+            totalTicks = state.resources.totalTicks
+          }
         }
 
-        if (!cache) {
-          isValid = true;
-          loop = 0;
-        }
         
         /** @var {Koviko.Prediction} */
         let prediction = this.predictions[listedAction.name];
@@ -1287,72 +1292,77 @@ const Koviko = {
            */
           let div = container ? container.children[i] : null;
 
-          /** @var {boolean} */
-          //isValid = true;
-
-          /** @var {number} */
-          let currentMana;
-
-          // Make sure that the loop is properly represented in \`state.progress\`
-          if (prediction.loop && !(prediction.name in state.progress)) {
-            /** @var {Koviko.Predictor~Progression} */
-            state.progress[prediction.name] = {
-              progress: 0,
-              completed: 0,
-              total: Koviko.globals.towns[prediction.action.townNum]['total' + prediction.action.varName],
-            };
-          }
           if(!cache) {
-          // Scope the loop variable outside the for loop, so we can read how many actions actually completed
-          // Predict each loop in sequence
-          for (loop; loop < listedAction.loops; loop++) {
-            let canStart = typeof(prediction.canStart) === "function" ? prediction.canStart(state.resources) : prediction.canStart;
-            if (!canStart) { isValid = false; }
-            if ( !canStart || listedAction.disabled ) { break; }
+            // Reinitialise variables on cache miss
+            isValid = true;
+            loop = 0;
 
-            // Save the mana prior to the prediction
-            currentMana = state.resources.mana;
+            /** @var {number} */
+            let currentMana;
 
-            // Run the prediction
-            this.predict(prediction, state);
-
-            // Check if the amount of mana used was too much
-            isValid = isValid && state.resources.mana >= 0;
-
-            // Only for Adventure Guild
-            if ( listedAction.name == "Adventure Guild" ) {
-              state.resources.mana -= state.resources.adventures * 200;
+            // Make sure that the loop is properly represented in \`state.progress\`
+            if (prediction.loop && !(prediction.name in state.progress)) {
+              /** @var {Koviko.Predictor~Progression} */
+              state.progress[prediction.name] = {
+                progress: 0,
+                completed: 0,
+                total: Koviko.globals.towns[prediction.action.townNum]['total' + prediction.action.varName],
+              };
             }
 
-            // Calculate the total amount of mana used in the prediction and add it to the total
-            total += currentMana - state.resources.mana;
+            // Scope the loop variable outside the for loop, so we can read how many actions actually completed
+            // Predict each loop in sequence
+            for (loop; loop < listedAction.loops; loop++) {
+              let canStart = typeof(prediction.canStart) === "function" ? prediction.canStart(state.resources) : prediction.canStart;
+              if (!canStart) { isValid = false; }
+              if ( !canStart || listedAction.disabled ) { break; }
+
+              // Save the mana prior to the prediction
+              currentMana = state.resources.mana;
+
+              // Run the prediction
+              this.predict(prediction, state);
+
+              // Check if the amount of mana used was too much
+              isValid = isValid && state.resources.mana >= 0;
+
+              // Only for Adventure Guild
+              if ( listedAction.name == "Adventure Guild" ) {
+                state.resources.mana -= state.resources.adventures * 200;
+              }
+
+              // Calculate the total amount of mana used in the prediction and add it to the total
+              total += currentMana - state.resources.mana;
 
 
 
-            // Calculate time spent
-            let temp = (currentMana - state.resources.mana) / getSpeedMult(state.resources.town);
-            totalTicks += temp;
-            state.resources.totalTicks=totalTicks;
+              // Calculate time spent
+              let temp = (currentMana - state.resources.mana) / getSpeedMult(state.resources.town);
+              totalTicks += temp;
+              state.resources.totalTicks=totalTicks;
 
-            // Only for Adventure Guild
-            if ( listedAction.name == "Adventure Guild" ) {
-              state.resources.mana += state.resources.adventures * 200;
-            }
+              // Only for Adventure Guild
+              if ( listedAction.name == "Adventure Guild" ) {
+                state.resources.mana += state.resources.adventures * 200;
+              }
 
-            // Run the effect, now that the mana checks are complete
-            if (prediction.effect) {
-              prediction.effect(state.resources, state.skills);
-            }
-            if (prediction.loop) {
-              if (prediction.loop.effect.end) {
-                prediction.loop.effect.end(state.resources, state.skills);
+              // Run the effect, now that the mana checks are complete
+              if (prediction.effect) {
+                prediction.effect(state.resources, state.skills);
+              }
+              if (prediction.loop) {
+                if (prediction.loop.effect.end) {
+                  prediction.loop.effect.end(state.resources, state.skills);
+                }
               }
             }
-          }
 
-          if(prediction.name in state.progress)
-            state.currProgress[prediction.name] = state.progress[prediction.name].completed / prediction.action.segments;
-        }
+            if(prediction.name in state.progress)
+              state.currProgress[prediction.name] = state.progress[prediction.name].completed / prediction.action.segments;
+
+            // Update the cache
+            this.cache.add([listedAction.name, listedAction.loops, listedAction.disabled], [state, total, isValid, loop])
+          }
           // Update the snapshots
           for (let i in snapshots) {
             snapshots[i].snap(state[i]);
@@ -1370,9 +1380,6 @@ const Koviko = {
             let setTarget = this.helpers.setTargetAction;
             div.querySelector(':scope > div').onclick = function(x) {setTarget(this.querySelector('img').outerHTML, listedAction.name)};
           }
-        }
-        if(!cache) {
-          this.cache.add({name: listedAction.name, n: listedAction.loops}, [state, total, isValid, loop])
         }
       });
 
