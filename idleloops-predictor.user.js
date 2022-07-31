@@ -310,7 +310,7 @@ const Koviko = {
     }
     next(key) {
       if(this.cache.length > (this.index + 1) && this.equals(this.cache[this.index + 1].key, key)){
-        return structuredClone(this.cache[++this.index].state);
+        return structuredClone(this.cache[++this.index].data);
       } else{
         this.miss();
         return false;
@@ -319,17 +319,18 @@ const Koviko = {
     miss() {
       this.cache = this.cache.slice(0, this.index + 1);
     }
-    reset(state) {
+    reset(data) {
       this.index = 0;
-      if(!this.equals(state, this.cache[0]?.state)){
-        this.cache = [{key: '', state: structuredClone(state)}]
+      if(!this.equals(data, this.cache[0]?.data)){
+        this.cache = [{key: '', data: structuredClone(data)}]
       }
     }
-    add(key, state) {
-      this.cache.push({'key': key, 'state':structuredClone(state)})
+    add(key, data) {
+      this.cache.push({'key': key, 'data':structuredClone(data)})
     }
-    equals(key1, key2) {
-      return JSON.stringify(key1) === JSON.stringify(key2);
+    // Why is this something i have to write
+    equals(thing1, thing2) {
+      return JSON.stringify(thing1) === JSON.stringify(thing2);
     }
   },
 
@@ -1258,11 +1259,21 @@ const Koviko = {
       // Initialize the display element for the total amount of mana used
       container && (this.totalDisplay.innerHTML = '');
 
+      let isValid, loop;
+
       // Run through the action list and update the view for each action
       actions.forEach((listedAction, i) => {
+        
+        // If the cache was still valid last time it was used
         if(cache) {
           cache = this.cache.next({name: listedAction.name, n: listedAction.loops});
-          if(cache) state = cache
+          // Pull out all the variables we would expensivly calculate
+          if(cache) [state, total, isValid, loop] = cache
+        }
+
+        if (!cache) {
+          isValid = true;
+          loop = 0;
         }
         
         /** @var {Koviko.Prediction} */
@@ -1277,7 +1288,7 @@ const Koviko = {
           let div = container ? container.children[i] : null;
 
           /** @var {boolean} */
-          let isValid = true;
+          //isValid = true;
 
           /** @var {number} */
           let currentMana;
@@ -1293,7 +1304,6 @@ const Koviko = {
           }
           if(!cache) {
           // Scope the loop variable outside the for loop, so we can read how many actions actually completed
-          let loop = 0;
           // Predict each loop in sequence
           for (loop; loop < listedAction.loops; loop++) {
             let canStart = typeof(prediction.canStart) === "function" ? prediction.canStart(state.resources) : prediction.canStart;
@@ -1362,11 +1372,12 @@ const Koviko = {
           }
         }
         if(!cache) {
-          this.cache.add({name: listedAction.name, n: listedAction.loops}, state)
+          this.cache.add({name: listedAction.name, n: listedAction.loops}, [state, total, isValid, loop])
         }
       });
 
       // Update the display for the total amount of mana used by the action list
+      totalTicks = state.resources.totalTicks
       totalTicks /= 50;
       var h = Math.floor(totalTicks / 3600);
       var m = Math.floor(totalTicks % 3600 / 60);
